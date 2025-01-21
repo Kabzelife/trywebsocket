@@ -248,15 +248,11 @@ async def check_dev_activity(data):
         db_connection = connection_pool.get_connection()
         cursor = db_connection.cursor()
         cursor.execute("SELECT traderPublicKey, solAmount FROM tokens WHERE mint = %s", (data.get("mint"),))
-        token_info = cursor.fetchone()
-        
-        # Schließe den Cursor direkt nach fetchone
+        token_info = cursor.fetchone()  # Fetch the results immediately
         cursor.close()
 
         if token_info:
-            dev_public_key, dev_sol_amount = token_info  # Entwicklerdaten abrufen
-
-            # Prüfen, ob der Entwickler an diesem Trade beteiligt ist
+            dev_public_key, dev_sol_amount = token_info
             if data.get("traderPublicKey") == dev_public_key:
                 tx_type = data.get("txType")
                 update_sol_amount = data.get("solAmount")
@@ -271,8 +267,7 @@ async def check_dev_activity(data):
                     action = f"Developer bought more: {update_sol_amount} SOL"
 
                 if action:
-                    # Für jede neue SQL-Operation einen neuen Cursor öffnen
-                    cursor = db_connection.cursor()
+                    cursor = db_connection.cursor()  # New cursor for new operation
                     cursor.execute("""
                         INSERT INTO DEV_TOKEN_HOLDING (mint, traderPublicKey, txType, solAmount, initialBuy, action, created_at)
                         VALUES (%s, %s, %s, %s, %s, %s, NOW())
@@ -285,8 +280,10 @@ async def check_dev_activity(data):
                         action
                     ))
                     db_connection.commit()
-                    cursor.close()  # Schließe den Cursor nach der Operation
+                    cursor.close()
                     logger.info(f"Entwickleraktivität gespeichert: {action}")
+        else:
+            logger.info(f"Kein Token-Info für Mint: {data.get('mint')}")
     except Exception as e:
         logger.error(f"Fehler beim Überprüfen der Entwickleraktivität: {e}")
     finally:
