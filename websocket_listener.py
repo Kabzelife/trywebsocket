@@ -66,17 +66,26 @@ async def subscribe():
                 except Exception as e:
                     if "Unread result found" in str(e):
                         logger.error(f"❌ Unread result found Fehler: {e}. Versuche weiterzumachen...")
-                        # Hier nicht schließen, sondern versuchen weiterzumachen
                         continue
                     else:
                         logger.error(f"❌ Unerwarteter Fehler bei Datenverarbeitung: {e}")
-                        # Hier nicht schließen, sondern versuchen weiterzumachen
                         continue
         except websockets.exceptions.ConnectionClosedError as e:
-            retry_count += 1
-            backoff_time = min(60, (2 ** retry_count) + random.uniform(0, 1))
-            logger.warning(f"❌ Verbindung geschlossen: {e}. Neuer Versuch in {backoff_time} Sekunden...")
-            await asyncio.sleep(backoff_time)
+            # WebSocket geschlossen, Bestätigung und Wiederverbindung
+            if websocket_instance:
+                await websocket_instance.close()  # Sicherstellen, dass er geschlossen ist
+                logger.info("WebSocket geschlossen")
+                websocket_instance = None
+                await asyncio.sleep(5)
+                
+                for i in range(5, 0, -1):
+                    logger.info(f"WebSocket wird in {i} Sekunden wieder geöffnet...")
+                    await asyncio.sleep(1)
+                
+                retry_count += 1
+                backoff_time = min(60, (2 ** retry_count) + random.uniform(0, 1))
+                logger.warning(f"Neuer Versuch der Verbindung in {backoff_time} Sekunden...")
+                await asyncio.sleep(backoff_time)
         except Exception as e:
             logger.error(f"❌ Unerwarteter Fehler: {e}")
             await asyncio.sleep(5)
@@ -88,7 +97,6 @@ async def subscribe():
         await websocket_instance.close()
         websocket_instance = None
         logger.info("WebSocket geschlossen")
-
 
 async def subscribe_existing_tokens_and_devs(websocket):
     """
