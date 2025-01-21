@@ -230,14 +230,15 @@ async def save_to_token_updates(data):
             data.get("solAmount"),
             data.get("vTokensInBondingCurve"),
             data.get("vSolInBondingCurve"),
-            data.get("marketCapSol")  # Hier sollte die MarketCap gespeichert werden
+            data.get("marketCapSol")
         ))
+        # Hier wird kein fetch benötigt, da es sich um ein INSERT handelt.
         db_connection.commit()
         logger.info(f"Update für Token gespeichert: {data.get('mint')}")
     except Exception as e:
         logger.error(f"Fehler beim Speichern der token_updates: {e}")
     finally:
-        if cursor:
+        if 'cursor' in locals():  # Überprüfen, ob cursor definiert ist, bevor wir es schließen
             cursor.close()
         if db_connection:
             db_connection.close()
