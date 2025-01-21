@@ -53,6 +53,7 @@ This WebSocket listener provides an efficient way to monitor token activity on P
 Tabelle tokens:<br>
 sql<p>
 <B>
+```bash
 CREATE TABLE tokens (<br>
     signature VARCHAR(255),<br>
     mint VARCHAR(255),<br>
@@ -71,9 +72,10 @@ CREATE TABLE tokens (<br>
     created_at DATETIME,<br>
     PRIMARY KEY (mint)<br>
 );<p>
-
+```
 Tabelle token_updates:<br>
 sql<p>
+```bash
 CREATE TABLE token_updates (<br>
     id INT AUTO_INCREMENT PRIMARY KEY,<br>
     mint VARCHAR(255),<br>
@@ -86,17 +88,19 @@ CREATE TABLE token_updates (<br>
     updated_at DATETIME,<br>
     INDEX idx_mint (mint)<br>
 );<p>
-
+```
 Tabelle developers:<br>
 sql<p>
+```bash
 CREATE TABLE developers (<br>
     id INT AUTO_INCREMENT PRIMARY KEY,<br>
     public_key VARCHAR(255) UNIQUE,<br>
     first_seen_at DATETIME<br>
 );<p>
-
+```
 Tabelle DEV_TOKEN_HOLDING:<br>
 sql<p>
+```bash
 CREATE TABLE DEV_TOKEN_HOLDING (<br>
     id INT AUTO_INCREMENT PRIMARY KEY,<br>
     mint VARCHAR(255),<br>
@@ -109,4 +113,4 @@ CREATE TABLE DEV_TOKEN_HOLDING (<br>
     INDEX idx_mint (mint)<br>
 );<p>
 </b>
-
+```
