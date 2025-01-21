@@ -59,13 +59,12 @@ async def subscribe():
                     logger.info(f"📩 Nachricht empfangen: {message}")
                     data = json.loads(message)
                     await process_data(data)
-            finally:
-                # Sicherstellen, dass die Verbindung korrekt geschlossen wird
-                if websocket_instance:
-                    await websocket_instance.close()
-                    websocket_instance = None
-                    logger.info("WebSocket geschlossen")
-
+            except websockets.exceptions.ConnectionClosedError as e:
+                logger.warning(f"❌ WebSocket-Verbindung geschlossen: {e}")
+                break  # Hier brechen wir die Schleife ab, da die Verbindung geschlossen wurde
+            except Exception as e:
+                logger.error(f"❌ Unerwarteter Fehler bei Datenverarbeitung: {e}")
+                # Hier schließen wir den WebSocket nicht, sondern versuchen weiter zu laufen
         except websockets.exceptions.ConnectionClosedError as e:
             retry_count += 1
             backoff_time = min(60, (2 ** retry_count) + random.uniform(0, 1))
@@ -76,6 +75,12 @@ async def subscribe():
             await asyncio.sleep(5)
     else:
         logger.error("Maximale Anzahl an Verbindungsversuchen erreicht. Beende Task.")
+
+    # Nur wenn wir hier ankommen, schließen wir die Verbindung
+    if websocket_instance:
+        await websocket_instance.close()
+        websocket_instance = None
+        logger.info("WebSocket geschlossen")
 
 
 async def subscribe_existing_tokens_and_devs(websocket):
@@ -246,49 +251,51 @@ async def save_to_token_updates(data):
 async def check_dev_activity(data):
     try:
         db_connection = connection_pool.get_connection()
-        cursor = db_connection.cursor()
-        cursor.execute("SELECT traderPublicKey, solAmount FROM tokens WHERE mint = %s", (data.get("mint"),))
-        token_info = cursor.fetchone()  # Fetch the results immediately
-        cursor.close()
+        with db_connection.cursor() as cursor:  # Verwenden Sie `with` für automatisches Schließen
+            # Erfolgt hier eine SELECT, dann müssen wir die Ergebnisse holen
+            cursor.execute("SELECT traderPublicKey, solAmount FROM tokens WHERE mint = %s", (data.get("mint"),))
+            token_info = cursor.fetchone()
+            logger.debug(f"Token Info für Mint {data.get('mint')}: {token_info}")
 
-        if token_info:
-            dev_public_key, dev_sol_amount = token_info
-            if data.get("traderPublicKey") == dev_public_key:
-                tx_type = data.get("txType")
-                update_sol_amount = data.get("solAmount")
+            if token_info:
+                dev_public_key, dev_sol_amount = token_info
+                if data.get("traderPublicKey") == dev_public_key:
+                    tx_type = data.get("txType")
+                    update_sol_amount = data.get("solAmount")
 
-                action = None
-                if tx_type == "sell":
-                    if dev_sol_amount <= update_sol_amount:
-                        action = "Developer sold all"
-                    else:
-                        action = f"Developer sold part: {update_sol_amount} of {dev_sol_amount}"
-                elif tx_type == "buy":
-                    action = f"Developer bought more: {update_sol_amount} SOL"
+                    action = None
+                    if tx_type == "sell":
+                        if dev_sol_amount <= update_sol_amount:
+                            action = "Developer sold all"
+                        else:
+                            action = f"Developer sold part: {update_sol_amount} of {dev_sol_amount}"
+                    elif tx_type == "buy":
+                        action = f"Developer bought more: {update_sol_amount} SOL"
 
-                if action:
-                    cursor = db_connection.cursor()  # New cursor for new operation
-                    cursor.execute("""
-                        INSERT INTO DEV_TOKEN_HOLDING (mint, traderPublicKey, txType, solAmount, initialBuy, action, created_at)
-                        VALUES (%s, %s, %s, %s, %s, %s, NOW())
-                    """, (
-                        data.get("mint"),
-                        dev_public_key,
-                        tx_type,
-                        update_sol_amount,
-                        dev_sol_amount,
-                        action
-                    ))
-                    db_connection.commit()
-                    cursor.close()
-                    logger.info(f"Entwickleraktivität gespeichert: {action}")
-        else:
-            logger.info(f"Kein Token-Info für Mint: {data.get('mint')}")
+                    if action:
+                        # Neue Cursor-Instanz für eine neue Operation, um sicherzustellen, dass keine ungeholten Ergebnisse bleiben
+                        with db_connection.cursor() as new_cursor:
+                            new_cursor.execute("""
+                                INSERT INTO DEV_TOKEN_HOLDING (mint, traderPublicKey, txType, solAmount, initialBuy, action, created_at)
+                                VALUES (%s, %s, %s, %s, %s, %s, NOW())
+                            """, (
+                                data.get("mint"),
+                                dev_public_key,
+                                tx_type,
+                                update_sol_amount,
+                                dev_sol_amount,
+                                action
+                            ))
+                        db_connection.commit()
+                        logger.info(f"Entwickleraktivität gespeichert: {action}")
     except Exception as e:
         logger.error(f"Fehler beim Überprüfen der Entwickleraktivität: {e}")
+        # Hier könnte ein Rollback sinnvoll sein, wenn die Transaktion nicht erfolgreich war
+        if db_connection:
+            db_connection.rollback()
     finally:
         if db_connection:
-            db_connection.close()
+            db_connection.close()  # Verbindung schließen, auch wenn ein Fehler auftrat
 
 async def save_dev_info(data):
     db_connection = None
