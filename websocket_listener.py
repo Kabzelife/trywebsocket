@@ -30,32 +30,40 @@ connection_pool = pooling.MySQLConnectionPool(
     **dbconfig
 )
 
+websocket_instance = None
+
 async def subscribe():
+    global websocket_instance
+    if websocket_instance is not None:
+        await websocket_instance.close()  # Sicherstellen, dass die alte Verbindung geschlossen wird
+        websocket_instance = None
+
     uri = "wss://pumpportal.fun/api/data"
     max_retries = 10
     retry_count = 0
     while retry_count < max_retries:
         try:
-            websocket = await websockets.connect(uri, ping_interval=20, close_timeout=10)
+            websocket_instance = await websockets.connect(uri, ping_interval=20, close_timeout=10)
             logger.info("🔗 WebSocket verbunden")
 
             # Abonnieren für neue Tokens
-            await websocket.send(json.dumps({"method": "subscribeNewToken"}))
+            await websocket_instance.send(json.dumps({"method": "subscribeNewToken"}))
             logger.info("✅ Anfrage 'subscribeNewToken' gesendet")
 
             # Abonniere bestehende Tokens und Entwickler
-            await subscribe_existing_tokens_and_devs(websocket)
+            await subscribe_existing_tokens_and_devs(websocket_instance)
 
             # Empfang und Verarbeitung der Daten
             try:
-                async for message in websocket:
+                async for message in websocket_instance:
                     logger.info(f"📩 Nachricht empfangen: {message}")
                     data = json.loads(message)
                     await process_data(data)
             finally:
                 # Sicherstellen, dass die Verbindung korrekt geschlossen wird
-                if websocket:
-                    await websocket.close()
+                if websocket_instance:
+                    await websocket_instance.close()
+                    websocket_instance = None
                     logger.info("WebSocket geschlossen")
 
         except websockets.exceptions.ConnectionClosedError as e:
