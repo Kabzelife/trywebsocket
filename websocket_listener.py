@@ -17,10 +17,10 @@ port = int(os.getenv('PORT', 5000))
 
 # MySQL-Verbindungs-Pooling konfigurieren
 dbconfig = {
-    "host": os.getenv('DB_HOST', "92.205.233.38"),
-    "user": os.getenv('DB_USER', "gaijin"),
-    "password": os.getenv('DB_PASSWORD', "D@v!s19942021"),
-    "database": os.getenv('DB_DATABASE', "admin_fetch")
+    "host": os.getenv('DB_HOST', "host"),
+    "user": os.getenv('DB_USER', "username"),
+    "password": os.getenv('DB_PASSWORD', "password"),
+    "database": os.getenv('DB_DATABASE', "database")
 }
 
 # Erstellen des Verbindungspools
