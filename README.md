@@ -1,16 +1,54 @@
-Hello there,
+**WebSocket Listener for PumpPortal.fun**
 
-this is a websocket_listener for pumpportal.fun.
-It will subscribe to new tokens created on pump.fun and will update the Marketcap with live sell and buy.
-The information will be saved in a database wich you have to create.
+This WebSocket listener is designed to interact with **Pump.fun**, specifically to monitor and update data for newly created tokens in real-time. Below are the key features and instructions for implementation:
 
-All coins older then 1 hour, will be permanantly deleted from the database aswell as the updates.
+### Features
+1. **Real-Time Subscription**:
+   - The listener subscribes to updates for all newly created tokens on **Pump.fun**.
+   - It monitors live buy and sell activities, dynamically updating the market capitalization.
 
-All tokens will recieve a Update for Marketcap or if the dev did sell, sell half or bought tokens.
-All dev's wallet addresses will be saved in the database aswell.
+2. **Database Management**:
+   - A dedicated database will be created to store relevant information.
+   - The database will include:
+     - All newly created tokens.
+     - Market capitalization updates.
+     - Developer wallet addresses.
 
-Install python and make a virtual envoirment.
-Start the Websocket_listener.py and enjoy.
+3. **Automated Data Cleanup**:
+   - Tokens older than **1 hour** will be permanently deleted from the database, along with their associated updates.
+
+4. **Developer Monitoring**:
+   - Developer wallet addresses will be stored in the database.
+   - Updates will include actions such as:
+     - Token sales.
+     - Partial sales (e.g., selling half of the tokens).
+     - Token purchases.
+
+### Setup Instructions
+1. **Python Installation**:
+   - Ensure Python is installed on your system. You can download it from the [official Python website](https://www.python.org/downloads/).
+
+2. **Virtual Environment**:
+   - Create a virtual environment to manage dependencies:
+     ```bash
+     python -m venv venv
+     source venv/bin/activate  # For Linux/macOS
+     venv\Scripts\activate   # For Windows
+     ```
+
+3. **Start the WebSocket Listener**:
+   - Save the script as `WebSocket_Listener.py`.
+   - Install required dependencies (if any) using `pip install -r requirements.txt`.
+   - Run the script:
+     ```bash
+     python WebSocket_Listener.py
+     ```
+
+4. **Enjoy the Service**:
+   - The listener will automatically handle subscription, updates, and database management.
+
+This WebSocket listener provides an efficient way to monitor token activity on Pump.fun while ensuring clean and up-to-date data storage.
+
 
 Tabelle tokens:<br>
 sql<p>
