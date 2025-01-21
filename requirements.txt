@@ -1,0 +1,4 @@
+websockets
+mysql-connector-python
+aiohttp
+flask
