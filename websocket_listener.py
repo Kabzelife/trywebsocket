@@ -159,7 +159,7 @@ async def process_data(data):
 
         if data.get("txType") == "create":
             await save_to_tokens(data)
-            await save_dev_info(data)
+            await save_to_dev_info(data)
         elif "marketCapSol" in data:
             logger.info(f"📊 Update für Token {data['mint']} empfangen")
             await save_to_token_updates(data)
@@ -224,56 +224,65 @@ async def save_to_token_updates(data):
             data.get("vSolInBondingCurve"),
             data.get("marketCapSol")
         ))
+        
+        # Cursor.close() und db_connection.close() müssen aufgerufen werden, 
+        # nachdem fetchone() oder fetchall() aufgerufen wurden, oder wenn kein fetch aufgerufen wird
         db_connection.commit()
         logger.info(f"Update für Token gespeichert: {data.get('mint')}")
     except Exception as e:
         logger.error(f"Fehler beim Speichern der token_updates: {e}")
     finally:
+        if cursor:
+            cursor.close()
         if db_connection:
             db_connection.close()
 
 async def check_dev_activity(data):
-    db_connection = None
     try:
         db_connection = connection_pool.get_connection()
-        with db_connection.cursor() as cursor:
-            cursor.execute("SELECT traderPublicKey, solAmount FROM tokens WHERE mint = %s", (data.get("mint"),))
-            token_info = cursor.fetchone()
+        cursor = db_connection.cursor()
+        cursor.execute("SELECT traderPublicKey, solAmount FROM tokens WHERE mint = %s", (data.get("mint"),))
+        token_info = cursor.fetchone()
+        cursor.close()  # Schließe den Cursor nach fetchone()
 
-            if not token_info:
-                logger.info(f"Keine Entwicklerdaten für Mint {data.get('mint')} gefunden.")
-                return
+        if token_info:
+            dev_public_key, dev_sol_amount = token_info  # Entwicklerdaten abrufen
 
-            dev_public_key, dev_sol_amount = token_info
-            action = None
-
+            # Prüfen, ob der Entwickler an diesem Trade beteiligt ist
             if data.get("traderPublicKey") == dev_public_key:
                 tx_type = data.get("txType")
                 update_sol_amount = data.get("solAmount")
 
+                action = None
                 if tx_type == "sell":
-                    action = "Developer sold all" if dev_sol_amount <= update_sol_amount else f"Developer sold part: {update_sol_amount}"
+                    if dev_sol_amount <= update_sol_amount:
+                        action = "Developer sold all"
+                    else:
+                        action = f"Developer sold part: {update_sol_amount} of {dev_sol_amount}"
                 elif tx_type == "buy":
                     action = f"Developer bought more: {update_sol_amount} SOL"
 
                 if action:
+                    cursor = db_connection.cursor()
                     cursor.execute("""
                         INSERT INTO DEV_TOKEN_HOLDING (mint, traderPublicKey, txType, solAmount, initialBuy, action, created_at)
                         VALUES (%s, %s, %s, %s, %s, %s, NOW())
                     """, (
-                        data.get("mint"), dev_public_key, tx_type, update_sol_amount, dev_sol_amount, action
+                        data.get("mint"),
+                        dev_public_key,
+                        tx_type,
+                        update_sol_amount,
+                        dev_sol_amount,
+                        action
                     ))
                     db_connection.commit()
+                    cursor.close()
                     logger.info(f"Entwickleraktivität gespeichert: {action}")
     except Exception as e:
         logger.error(f"Fehler beim Überprüfen der Entwickleraktivität: {e}")
     finally:
         if db_connection:
             db_connection.close()
-
-
-
-
 
 async def save_dev_info(data):
     db_connection = None
@@ -282,14 +291,17 @@ async def save_dev_info(data):
         db_connection = connection_pool.get_connection()
         cursor = db_connection.cursor()
 
-        # Prüfen und Speichern der Entwicklerinformationen
-        cursor.execute("""
-            INSERT INTO developers (public_key, first_seen_at)
-            VALUES (%s, NOW())
-            ON DUPLICATE KEY UPDATE first_seen_at = first_seen_at
-        """, (data.get("traderPublicKey"),))
-        db_connection.commit()
-        logger.info(f"Entwicklerinformationen gespeichert: {data.get('traderPublicKey')}")
+        # Prüfen, ob der Entwickler schon in der Datenbank existiert
+        cursor.execute("SELECT id FROM developers WHERE public_key = %s", (data.get("traderPublicKey"),))
+        result = cursor.fetchone()
+
+        if not result:
+            cursor.execute(
+                "INSERT INTO developers (public_key, first_seen_at) VALUES (%s, NOW())",
+                (data.get("traderPublicKey"),)
+            )
+            db_connection.commit()
+            logger.info(f"Entwicklerinformationen gespeichert: {data.get('traderPublicKey')}")
 
     except Exception as e:
         logger.error(f"Fehler beim Speichern der Entwicklerinformationen: {e}")
@@ -298,8 +310,6 @@ async def save_dev_info(data):
             cursor.close()
         if db_connection:
             db_connection.close()
-
-
 
 
 
@@ -416,7 +426,6 @@ async def main():
     app = web.Application()
     app.router.add_get('/', on_start)
 
-    # Nur eine Instanz der subscribe-Funktion ausführen
     asyncio.create_task(subscribe())
     asyncio.create_task(clean_old_data())
 
@@ -432,7 +441,6 @@ async def main():
             await asyncio.sleep(3600)
     except asyncio.CancelledError:
         logger.info("WebSocket Listener wurde gestoppt")
-
 
 if __name__ == "__main__":
     asyncio.run(main())
