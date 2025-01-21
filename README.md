@@ -54,63 +54,64 @@ Tabelle tokens:<br>
 sql<p>
 <B>
 ```bash
-CREATE TABLE tokens (<br>
-    signature VARCHAR(255),<br>
-    mint VARCHAR(255),<br>
-    traderPublicKey VARCHAR(255),<br>
-    txType VARCHAR(50),<br>
-    initialBuy DECIMAL(18, 9),<br>
-    solAmount DECIMAL(18, 9),<br>
-    bondingCurveKey VARCHAR(255),<br>
-    vTokensInBondingCurve DECIMAL(18, 9),<br>
-    vSolInBondingCurve DECIMAL(18, 9),<br>
-    marketCapSol DECIMAL(18, 9),<br>
-    name VARCHAR(255),<br>
-    symbol VARCHAR(50),<br>
-    uri VARCHAR(255),<br>
-    pool VARCHAR(255),<br>
-    created_at DATETIME,<br>
-    PRIMARY KEY (mint)<br>
-);<p>
+CREATE TABLE tokens (
+    signature VARCHAR(255),
+    mint VARCHAR(255),
+    traderPublicKey VARCHAR(255),
+    txType VARCHAR(50),
+    initialBuy DECIMAL(18, 9),
+    solAmount DECIMAL(18, 9),
+    bondingCurveKey VARCHAR(255),
+    vTokensInBondingCurve DECIMAL(18, 9),
+    vSolInBondingCurve DECIMAL(18, 9),
+    marketCapSol DECIMAL(18, 9),
+    name VARCHAR(255),
+    symbol VARCHAR(50),
+    uri VARCHAR(255),
+    pool VARCHAR(255),
+    created_at DATETIME,
+    PRIMARY KEY (mint)
+);
 ```
 Tabelle token_updates:<br>
 sql<p>
 ```bash
-CREATE TABLE token_updates (<br>
-    id INT AUTO_INCREMENT PRIMARY KEY,<br>
-    mint VARCHAR(255),<br>
-    traderPublicKey VARCHAR(255),<br>
-    txType VARCHAR(50),<br>
-    solAmount DECIMAL(18, 9),<br>
-    vTokensInBondingCurve DECIMAL(18, 9),<br>
-    vSolInBondingCurve DECIMAL(18, 9),<br>
-    marketCapSol DECIMAL(18, 9),<br>
-    updated_at DATETIME,<br>
-    INDEX idx_mint (mint)<br>
-);<p>
+CREATE TABLE token_updates (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    mint VARCHAR(255),
+    traderPublicKey VARCHAR(255),
+    txType VARCHAR(50),
+    solAmount DECIMAL(18, 9),
+    vTokensInBondingCurve DECIMAL(18, 9),
+    vSolInBondingCurve DECIMAL(18, 9),
+    marketCapSol DECIMAL(18, 9),
+    updated_at DATETIME,
+    INDEX idx_mint (mint)
+);
 ```
 Tabelle developers:<br>
 sql<p>
 ```bash
-CREATE TABLE developers (<br>
-    id INT AUTO_INCREMENT PRIMARY KEY,<br>
-    public_key VARCHAR(255) UNIQUE,<br>
-    first_seen_at DATETIME<br>
-);<p>
+CREATE TABLE developers (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    public_key VARCHAR(255) UNIQUE,
+    first_seen_at DATETIME
+);
 ```
 Tabelle DEV_TOKEN_HOLDING:<br>
 sql<p>
 ```bash
-CREATE TABLE DEV_TOKEN_HOLDING (<br>
-    id INT AUTO_INCREMENT PRIMARY KEY,<br>
-    mint VARCHAR(255),<br>
-    traderPublicKey VARCHAR(255),<br>
-    txType VARCHAR(50),<br>
-    solAmount DECIMAL(18, 9),<br>
-    initialBuy DECIMAL(18, 9),<br>
-    action VARCHAR(255),<br>
-    created_at DATETIME,<br>
-    INDEX idx_mint (mint)<br>
-);<p>
-</b>
+CREATE TABLE DEV_TOKEN_HOLDING (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    mint VARCHAR(255),
+    traderPublicKey VARCHAR(255),
+    txType VARCHAR(50),
+    solAmount DECIMAL(18, 9),
+    initialBuy DECIMAL(18, 9),
+    action VARCHAR(255),
+    created_at DATETIME,
+    INDEX idx_mint (mint)
+);
+
 ```
+</b>
