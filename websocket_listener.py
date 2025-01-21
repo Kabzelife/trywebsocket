@@ -159,7 +159,7 @@ async def process_data(data):
 
         if data.get("txType") == "create":
             await save_to_tokens(data)
-            await save_to_dev_info(data)
+            await save_dev_info(data)  # Korrektur: `save_dev_info` statt `save_to_dev_info`
         elif "marketCapSol" in data:
             logger.info(f"📊 Update für Token {data['mint']} empfangen")
             await save_to_token_updates(data)
