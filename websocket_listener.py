@@ -284,7 +284,7 @@ async def save_dev_info(data):
         db_connection = connection_pool.get_connection()
         cursor = db_connection.cursor()
 
-        # Prüfen, ob der Entwickler schon in der Datenbank existiert
+        # Entwickler in die Datenbank speichern
         cursor.execute("SELECT id FROM developers WHERE public_key = %s", (data.get("traderPublicKey"),))
         result = cursor.fetchone()
 
@@ -303,6 +303,7 @@ async def save_dev_info(data):
             cursor.close()
         if db_connection:
             db_connection.close()
+
 
 
 
@@ -419,6 +420,7 @@ async def main():
     app = web.Application()
     app.router.add_get('/', on_start)
 
+    # Nur eine Instanz der subscribe-Funktion ausführen
     asyncio.create_task(subscribe())
     asyncio.create_task(clean_old_data())
 
@@ -434,6 +436,7 @@ async def main():
             await asyncio.sleep(3600)
     except asyncio.CancelledError:
         logger.info("WebSocket Listener wurde gestoppt")
+
 
 if __name__ == "__main__":
     asyncio.run(main())
