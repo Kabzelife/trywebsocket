@@ -167,8 +167,8 @@ async def process_data(data):
 
         if data.get("txType") == "create":
             await save_to_tokens(data)
-            await save_dev_info(data)  # Korrektur: `save_dev_info` statt `save_to_dev_info`
-        elif "marketCapSol" in data:
+            await save_dev_info(data)
+        elif "marketCapSol" in data:  # Überprüfen, ob 'marketCapSol' in den Daten existiert
             logger.info(f"📊 Update für Token {data['mint']} empfangen")
             await save_to_token_updates(data)
             await check_dev_activity(data)
@@ -230,11 +230,8 @@ async def save_to_token_updates(data):
             data.get("solAmount"),
             data.get("vTokensInBondingCurve"),
             data.get("vSolInBondingCurve"),
-            data.get("marketCapSol")
+            data.get("marketCapSol")  # Hier sollte die MarketCap gespeichert werden
         ))
-        
-        # Cursor.close() und db_connection.close() müssen aufgerufen werden, 
-        # nachdem fetchone() oder fetchall() aufgerufen wurden, oder wenn kein fetch aufgerufen wird
         db_connection.commit()
         logger.info(f"Update für Token gespeichert: {data.get('mint')}")
     except Exception as e:
@@ -352,6 +349,7 @@ async def fetch_latest_update(mint):
     except Exception as e:
         logger.error(f"Fehler beim Abrufen des neuesten Updates für {mint}: {e}")
         return None
+
 
 async def update_token_marketcap(mint, marketCapSol):
     try:
