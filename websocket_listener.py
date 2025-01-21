@@ -54,17 +54,24 @@ async def subscribe():
             await subscribe_existing_tokens_and_devs(websocket_instance)
 
             # Empfang und Verarbeitung der Daten
-            try:
-                async for message in websocket_instance:
+            while True:
+                try:
+                    message = await websocket_instance.recv()
                     logger.info(f"📩 Nachricht empfangen: {message}")
                     data = json.loads(message)
                     await process_data(data)
-            except websockets.exceptions.ConnectionClosedError as e:
-                logger.warning(f"❌ WebSocket-Verbindung geschlossen: {e}")
-                break  # Hier brechen wir die Schleife ab, da die Verbindung geschlossen wurde
-            except Exception as e:
-                logger.error(f"❌ Unerwarteter Fehler bei Datenverarbeitung: {e}")
-                # Hier schließen wir den WebSocket nicht, sondern versuchen weiter zu laufen
+                except websockets.exceptions.ConnectionClosedError as e:
+                    logger.warning(f"❌ WebSocket-Verbindung geschlossen: {e}")
+                    break  # Breche diese Schleife ab, da die Verbindung geschlossen wurde
+                except Exception as e:
+                    if "Unread result found" in str(e):
+                        logger.error(f"❌ Unread result found Fehler: {e}. Versuche weiterzumachen...")
+                        # Hier nicht schließen, sondern versuchen weiterzumachen
+                        continue
+                    else:
+                        logger.error(f"❌ Unerwarteter Fehler bei Datenverarbeitung: {e}")
+                        # Hier nicht schließen, sondern versuchen weiterzumachen
+                        continue
         except websockets.exceptions.ConnectionClosedError as e:
             retry_count += 1
             backoff_time = min(60, (2 ** retry_count) + random.uniform(0, 1))
