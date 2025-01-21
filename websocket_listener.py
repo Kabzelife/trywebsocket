@@ -234,52 +234,44 @@ async def save_to_token_updates(data):
 
 async def check_dev_activity(data):
     db_connection = None
-    cursor = None
     try:
         db_connection = connection_pool.get_connection()
-        cursor = db_connection.cursor()
+        with db_connection.cursor() as cursor:
+            cursor.execute("SELECT traderPublicKey, solAmount FROM tokens WHERE mint = %s", (data.get("mint"),))
+            token_info = cursor.fetchone()
 
-        # Entwicklerdaten abrufen
-        cursor.execute("SELECT traderPublicKey, solAmount FROM tokens WHERE mint = %s", (data.get("mint"),))
-        token_info = cursor.fetchone()
+            if not token_info:
+                logger.info(f"Keine Entwicklerdaten für Mint {data.get('mint')} gefunden.")
+                return
 
-        # Falls keine Daten gefunden werden, abbrechen
-        if not token_info:
-            logger.info(f"Keine Entwicklerdaten für Mint {data.get('mint')} gefunden.")
-            return
+            dev_public_key, dev_sol_amount = token_info
+            action = None
 
-        dev_public_key, dev_sol_amount = token_info
-        action = None
+            if data.get("traderPublicKey") == dev_public_key:
+                tx_type = data.get("txType")
+                update_sol_amount = data.get("solAmount")
 
-        # Entwickleraktivität prüfen
-        if data.get("traderPublicKey") == dev_public_key:
-            tx_type = data.get("txType")
-            update_sol_amount = data.get("solAmount")
+                if tx_type == "sell":
+                    action = "Developer sold all" if dev_sol_amount <= update_sol_amount else f"Developer sold part: {update_sol_amount}"
+                elif tx_type == "buy":
+                    action = f"Developer bought more: {update_sol_amount} SOL"
 
-            if tx_type == "sell":
-                action = "Developer sold all" if dev_sol_amount <= update_sol_amount else f"Developer sold part: {update_sol_amount}"
-            elif tx_type == "buy":
-                action = f"Developer bought more: {update_sol_amount} SOL"
-
-            # Aktion speichern
-            if action:
-                cursor.execute("""
-                    INSERT INTO DEV_TOKEN_HOLDING (mint, traderPublicKey, txType, solAmount, initialBuy, action, created_at)
-                    VALUES (%s, %s, %s, %s, %s, %s, NOW())
-                """, (
-                    data.get("mint"), dev_public_key, tx_type, update_sol_amount, dev_sol_amount, action
-                ))
-                db_connection.commit()
-                logger.info(f"Entwickleraktivität gespeichert: {action}")
-
+                if action:
+                    cursor.execute("""
+                        INSERT INTO DEV_TOKEN_HOLDING (mint, traderPublicKey, txType, solAmount, initialBuy, action, created_at)
+                        VALUES (%s, %s, %s, %s, %s, %s, NOW())
+                    """, (
+                        data.get("mint"), dev_public_key, tx_type, update_sol_amount, dev_sol_amount, action
+                    ))
+                    db_connection.commit()
+                    logger.info(f"Entwickleraktivität gespeichert: {action}")
     except Exception as e:
         logger.error(f"Fehler beim Überprüfen der Entwickleraktivität: {e}")
     finally:
-        # Sicherstellen, dass der Cursor geschlossen wird
-        if cursor:
-            cursor.close()
         if db_connection:
             db_connection.close()
+
+
 
 
 
